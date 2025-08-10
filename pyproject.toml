@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "explainable-attention"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name="David W. Ludwig II", email="davidludwigii@gmail.com" }
 ]
@@ -17,9 +17,6 @@ dependencies = [
   "attn-gym",
   "torch >= 2.5.0"
 ]
-
-[project.scripts]
-dbtk = "dbtk.cli:main"
 
 [project.urls]
 "Homepage" = "https://github.com/DLii-Research/explainable-attention"

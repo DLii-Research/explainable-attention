@@ -16,24 +16,28 @@ def compute(
 
     # Reset all attention head masks to 1.0
     one = torch.tensor(1.0)
-    for layer in transformer_layers:
-        layer.attention_head_mask.requires_grad_(False)
-        layer.attention_head_mask.set_(one)
+
+    with torch.no_grad():
+        for layer in transformer_layers:
+            layer.attention_head_mask.requires_grad_(False)
+            layer.attention_head_mask.set_(one.to(layer.attention_head_mask.device))
 
     # forward pass with no masking
     # k = 1.0
     loss = objective(batch)
     attention_weights = [layer.attention_weights for layer in transformer_layers]
-    attribution_results = [g.detach() for g in torch.autograd.grad(loss, attention_weights)]
+    attribution_results = [g.detach() for g in torch.autograd.grad(loss, attention_weights, retain_graph=False, create_graph=False)]
 
     for layer, A, attribution in zip(tqdm(transformer_layers, disable=(not show_progress)), attention_weights, attribution_results):
         for k in torch.linspace(0.0, 1.0, integration_steps)[:-1]:
-            layer.attention_head_mask.set_(k)
-            attribution += torch.autograd.grad(objective(batch), layer.attention_weights)[0].detach()
-        attribution[:] = A * attribution / integration_steps
-        layer.attention_head_mask.set_(one)
+            layer.attention_head_mask.set_(k.to(layer.attention_head_mask.device))
+            attribution += torch.autograd.grad(objective(batch), layer.attention_weights, retain_graph=False, create_graph=False)[0].detach()
+        with torch.no_grad():
+            attribution[:] = A * attribution / integration_steps
+            layer.attention_head_mask.set_(one.to(layer.attention_head_mask.device))
 
-    return torch.stack(attribution_results).transpose(0, 1)
+    with torch.no_grad():
+        return torch.stack(attribution_results).transpose(0, 1)
 
 # Patching -----------------------------------------------------------------------------------------
 
